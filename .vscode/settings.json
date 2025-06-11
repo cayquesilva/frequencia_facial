@@ -1,0 +1,4 @@
+{
+    // ... outras configurações
+    "python.defaultInterpreterPath": "C:\\Python\\Python39\\python.exe" // Remova ou corrija se estiver errada
+}
