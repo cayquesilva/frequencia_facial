@@ -11,7 +11,7 @@ from app.routes import api_bp # Importa o Blueprint das rotas
 app = Flask(__name__)
 
 # Configurar CORS para todas as rotas da API
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app, resources={r"/api/*": {"origins": "https://frequencia.simplisoft.com.br"}}) 
 
 # Registrar o Blueprint das rotas
 app.register_blueprint(api_bp)

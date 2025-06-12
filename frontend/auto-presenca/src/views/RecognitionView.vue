@@ -15,7 +15,9 @@
   </template>
   
   <script>
-  import { onMounted, ref, onBeforeUnmount } from 'vue';
+    import { onMounted, ref, onBeforeUnmount } from 'vue';
+    // Importe a função de API para reconhecimento
+    import { recognizeFace } from '../api/backendApi'; // <-- AQUI ESTÁ A MUDANÇA PRINCIPAL
   
   // Funções utilitárias e de API (mantenha em um arquivo separado como src/api/backendApi.js)
   function speak(text) {
@@ -27,24 +29,6 @@
           synth.speak(utterance);
       } else {
           console.warn("API SpeechSynthesis não suportada neste navegador.");
-      }
-  }
-  
-  async function recognizeFaceApi(imageDataURL) {
-      try {
-          const response = await fetch('http://127.0.0.1:5000/api/recognize', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ image: imageDataURL })
-          });
-          const data = await response.json();
-          if (!response.ok) {
-              throw new Error(data.error || 'Erro desconhecido ao reconhecer.');
-          }
-          return data;
-      } catch (error) {
-          console.error('Erro de rede ou ao enviar frame para reconhecimento:', error);
-          throw error;
       }
   }
   
@@ -126,7 +110,7 @@
             const imageDataURL = canvas.toDataURL('image/jpeg', 0.8);
 
             try {
-                const data = await recognizeFaceApi(imageDataURL);
+                const data = await recognizeFace(imageDataURL); // <-- CHAMA A FUNÇÃO IMPORTADA
 
                 if (data.recognized) {
                 // A lógica de cooldown do frontend ainda é útil para evitar spam de requisições,

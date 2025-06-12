@@ -16,7 +16,7 @@ services:
       labels:
         # Labels para o Traefik rotear o tráfego para este serviço (sua API)
         - "traefik.enable=true"
-        - "traefik.http.routers.backend-api.rule=Host(`apifreq.academiaarius.com`)"
+        - "traefik.http.routers.backend-api.rule=Host(`apifreq.simplisoft.com.br`)"
         - "traefik.http.routers.backend-api.entrypoints=web"
         - "traefik.http.routers.backend-api.entrypoints=websecure"
         - "traefik.http.routers.backend-api.tls.certresolver=myresolver"
@@ -32,14 +32,14 @@ services:
       labels:
         # Labels para o Traefik rotear o tráfego para este serviço (seu Frontend Vue.js)
         - "traefik.enable=true"
-        - "traefik.http.routers.frontend-app.rule=Host(`frequencia.academiaarius.com`)"
+        - "traefik.http.routers.frontend-app.rule=Host(`frequencia.simplisoft.com.br`)"
         - "traefik.http.routers.frontend-app.entrypoints=web"
         - "traefik.http.routers.frontend-app.entrypoints=websecure"
         - "traefik.http.routers.frontend-app.tls.certresolver=myresolver"
         - "traefik.http.services.frontend-app.loadbalancer.server.port=80"
         # Opcional, mas recomendado para SPAs com Nginx (reforcei isso antes):
         - "traefik.http.middlewares.frontend-redirect.redirectscheme.scheme=https"
-        - "traefik.http.routers.frontend-app-http.rule=Host(`frequencia.academiaarius.com`)"
+        - "traefik.http.routers.frontend-app-http.rule=Host(`frequencia.simplisoft.com.br`)"
         - "traefik.http.routers.frontend-app-http.entrypoints=web"
         - "traefik.http.routers.frontend-app-http.middlewares=frontend-redirect@docker"
         - "traefik.http.routers.frontend-app-http.service=frontend-app"

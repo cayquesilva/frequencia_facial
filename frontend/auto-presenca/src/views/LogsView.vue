@@ -77,8 +77,9 @@
   </template>
   
   <script>
-  import { ref, reactive, onMounted } from 'vue';
-  import { fetchSchoolUnits, fetchAttendances } from '../api/backendApi'; // Importar as funções de API
+    import { ref, reactive, onMounted } from 'vue';
+    // Importar as funções de API, incluindo a nova para exportação CSV
+    import { fetchSchoolUnits, fetchAttendances, exportAttendancesCsv } from '../api/backendApi'; // <-- AQUI A MUDANÇA
   
   export default {
     name: 'LogsView',
@@ -128,16 +129,16 @@
       };
   
       const exportCsv = () => {
-        const params = new URLSearchParams({
+        const params = {
           start_date: filters.startDate,
           end_date: filters.endDate,
           turma: filters.turma,
           school_unit_id: filters.school_unit_id,
           search_query: filters.searchQuery
-        }).toString();
-        
-        // Abre em uma nova aba para iniciar o download
-        window.open(`http://127.0.0.1:5000/api/attendances/export_csv?${params}`, '_blank');
+        };
+
+        // Chama a função exportada do backendApi.js
+        exportAttendancesCsv(params); // <-- AQUI A MUDANÇA PRINCIPAL
       };
   
       onMounted(() => {

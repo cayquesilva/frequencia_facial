@@ -84,4 +84,10 @@ export async function fetchAttendances(params) {
     }
 }
 
+export async function exportAttendancesCsv(params) {
+    const query = new URLSearchParams(params).toString();
+    // Abre em uma nova aba para iniciar o download
+    window.open(`<span class="math-inline">\{API\_BASE\_URL\}/attendances/export\_csv?</span>{query}`, '_blank');
+}
+
 // ... adicione mais funções para exportar CSV, atualizar/deletar unidades, etc.

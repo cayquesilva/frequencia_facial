@@ -65,159 +65,128 @@
   </template>
   
   <script>
-  import { onMounted, ref, reactive } from 'vue';
-  
-  // Funções utilitárias (pode manter aqui ou mover para um arquivo separado, ex: utils/speech.js)
-  function speak(text) {
-      const synth = window.speechSynthesis;
-      if (synth) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'pt-BR';
-          utterance.rate = 1.1;
-          synth.speak(utterance);
-      } else {
-          console.warn("API SpeechSynthesis não suportada neste navegador.");
-      }
-  }
-  
-  // Funções de API (melhor centralizá-las em src/api/backendApi.js)
-  async function fetchSchoolUnitsApi() {
-      try {
-          const response = await fetch('http://127.0.0.1:5000/api/school_units');
-          if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return await response.json();
-      } catch (error) {
-          console.error('Erro ao carregar unidades escolares:', error);
-          throw error; // Propagate the error for handling in the component
-      }
-  }
-  
-  async function registerStudentApi(studentData) {
-      try {
-          const response = await fetch('http://127.0.0.1:5000/api/students', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(studentData)
-          });
-          const data = await response.json();
-          if (!response.ok) {
-              throw new Error(data.error || 'Erro desconhecido ao cadastrar.');
-          }
-          return data;
-      } catch (error) {
-          console.error('Erro de rede ou ao enviar cadastro:', error);
-          throw error;
-      }
-  }
-  
-  
-  export default {
-    name: 'AdminView',
-    setup() {
-      // Data properties
-      const webcamFeed = ref(null);
-      const canvasPhoto = ref(null);
-      const capturedImageDataURL = ref(null);
-      const schoolUnits = ref([]);
-      const student = reactive({
-        name: '',
-        matricula: '',
-        turma: '',
-        turno: '',
-        idade: null,
-        school_unit_id: null,
-      });
-      let streamCadastro = null;
-  
-      // Methods
-      const startWebcamCadastro = async () => {
-        try {
-          if (streamCadastro) {
-            streamCadastro.getTracks().forEach(track => track.stop());
-          }
-          streamCadastro = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (webcamFeed.value) {
-              webcamFeed.value.srcObject = streamCadastro;
-              webcamFeed.value.style.display = 'block';
-          }
-          console.log("Webcam de cadastro iniciada com sucesso!");
-        } catch (err) {
-          console.error("Erro ao acessar a webcam de cadastro: ", err);
-          alert("Não foi possível acessar a webcam de cadastro. Verifique as permissões do navegador e se outra aba/app está usando a câmera.");
+    import { onMounted, ref, reactive } from 'vue';
+    // Importe as funções de API do seu módulo centralizado
+    import { fetchSchoolUnits, registerStudent } from '../api/backendApi'; // <-- AQUI ESTÁ A MUDANÇA PRINCIPAL
+
+    // Funções utilitárias (speak) podem permanecer aqui ou em um módulo separado
+    function speak(text) {
+        const synth = window.speechSynthesis;
+        if (synth) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 1.1;
+            synth.speak(utterance);
+        } else {
+            console.warn("API SpeechSynthesis não suportada neste navegador.");
         }
-      };
-  
-      const loadSchoolUnits = async () => {
-        try {
-          schoolUnits.value = await fetchSchoolUnitsApi();
-        } catch (error) {
-          alert('Erro ao carregar unidades escolares. Verifique o console.');
-        }
-      };
-  
-      const captureImage = () => {
-        if (!streamCadastro) {
-          alert("A webcam de cadastro não está ativa. Por favor, inicie a webcam primeiro.");
-          return;
-        }
-  
-        const video = webcamFeed.value;
-        const canvas = canvasPhoto.value;
-  
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-  
-        const context = canvas.getContext('2d');
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  
-        capturedImageDataURL.value = canvas.toDataURL('image/png');
-        console.log("Imagem capturada e exibida para cadastro!");
-      };
-  
-      const saveStudent = async () => {
-        if (!capturedImageDataURL.value) {
-          alert("Por favor, capture uma imagem antes de salvar o cadastro.");
-          return;
-        }
-  
-        // O 'image' property is added here directly from capturedImageDataURL
-        const studentDataToSend = { ...student, image: capturedImageDataURL.value };
-  
-        console.log("Tentando enviar dados do aluno para cadastro:", studentDataToSend);
-  
-        try {
-          const response = await registerStudentApi(studentDataToSend);
-          console.log('Sucesso no cadastro:', response);
-          alert('Aluno cadastrado com sucesso!');
-          // Reset form and image preview
-          Object.assign(student, { name: '', matricula: '', turma: '', turno: '', idade: null, school_unit_id: null });
-          capturedImageDataURL.value = null;
-          // Optionally restart webcam or just keep it running
-        } catch (error) {
-          alert('Erro ao cadastrar aluno: ' + error.message);
-        }
-      };
-  
-      // Lifecycle Hook
-      onMounted(() => {
-        startWebcamCadastro();
-        loadSchoolUnits();
-      });
-  
-      // Return reactive properties and methods
-      return {
-        webcamFeed,
-        canvasPhoto,
-        capturedImageDataURL,
-        schoolUnits,
-        student,
-        captureImage,
-        saveStudent,
-      };
     }
-  };
+  
+    export default {
+        name: 'AdminView',
+        setup() {
+            // Data properties
+            const webcamFeed = ref(null);
+            const canvasPhoto = ref(null);
+            const capturedImageDataURL = ref(null);
+            const schoolUnits = ref([]);
+            const student = reactive({
+                name: '',
+                matricula: '',
+                turma: '',
+                turno: '',
+                idade: null,
+                school_unit_id: null,
+            });
+            let streamCadastro = null;
+        
+            // Methods
+            const startWebcamCadastro = async () => {
+                try {
+                if (streamCadastro) {
+                    streamCadastro.getTracks().forEach(track => track.stop());
+                }
+                streamCadastro = await navigator.mediaDevices.getUserMedia({ video: true });
+                if (webcamFeed.value) {
+                    webcamFeed.value.srcObject = streamCadastro;
+                    webcamFeed.value.style.display = 'block';
+                }
+                console.log("Webcam de cadastro iniciada com sucesso!");
+                } catch (err) {
+                console.error("Erro ao acessar a webcam de cadastro: ", err);
+                alert("Não foi possível acessar a webcam de cadastro. Verifique as permissões do navegador e se outra aba/app está usando a câmera.");
+                }
+            };
+        
+            const loadSchoolUnits = async () => {
+                try {
+                    schoolUnits.value = await fetchSchoolUnits(); // <-- CHAMA A FUNÇÃO IMPORTADA
+                } catch (error) {
+                    alert('Erro ao carregar unidades escolares. Verifique o console.'+error.message);
+                }
+            };
+        
+            const captureImage = () => {
+                if (!streamCadastro) {
+                    alert("A webcam de cadastro não está ativa. Por favor, inicie a webcam primeiro.");
+                    return;
+                }
+        
+                const video = webcamFeed.value;
+                const canvas = canvasPhoto.value;
+        
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+        
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+                capturedImageDataURL.value = canvas.toDataURL('image/png');
+                console.log("Imagem capturada e exibida para cadastro!");
+            };
+        
+            const saveStudent = async () => {
+                if (!capturedImageDataURL.value) {
+                    alert("Por favor, capture uma imagem antes de salvar o cadastro.");
+                    return;
+                }
+        
+                // O 'image' property is added here directly from capturedImageDataURL
+                const studentDataToSend = { ...student, image: capturedImageDataURL.value };
+        
+                console.log("Tentando enviar dados do aluno para cadastro:", studentDataToSend);
+        
+                try {
+                    const response = await registerStudent(studentDataToSend); // <-- CHAMA A FUNÇÃO IMPORTADA
+                    console.log('Sucesso no cadastro:', response);
+                    alert('Aluno cadastrado com sucesso!');
+                    // Reset form and image preview
+                    Object.assign(student, { name: '', matricula: '', turma: '', turno: '', idade: null, school_unit_id: null });
+                    capturedImageDataURL.value = null;
+                // Optionally restart webcam or just keep it running
+                } catch (error) {
+                    alert('Erro ao cadastrar aluno: ' + error.message);
+                }
+            };
+        
+            // Lifecycle Hook
+            onMounted(() => {
+                startWebcamCadastro();
+                loadSchoolUnits();
+            });
+        
+            // Return reactive properties and methods
+            return {
+                webcamFeed,
+                canvasPhoto,
+                capturedImageDataURL,
+                schoolUnits,
+                student,
+                captureImage,
+                saveStudent,
+            };
+        }
+    };
   </script>
   
   <style scoped>
