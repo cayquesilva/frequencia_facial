@@ -12,12 +12,13 @@ from app.services.database import (
     add_student_to_db, get_all_students, get_attendances_from_db,
     register_attendance_in_db, is_duplicate_attendance,
     add_school_unit_to_db, get_all_school_units, update_school_unit_in_db,
-    delete_school_unit_from_db
+    delete_school_unit_from_db,get_students_by_school_unit, get_student_details_by_matricula,
+    update_student_image_path, update_student_data, delete_student_by_matricula
 )
 from app.services.face_recognition import (
     generate_embedding, add_student_embedding,
-    recognize_face_from_image, REGISTERED_STUDENTS_EMBEDDINGS,
-    IMG_SAVE_PATH, TEMP_IMG_DIR
+    recognize_face_from_image,remove_student_embedding, REGISTERED_STUDENTS_EMBEDDINGS,
+    IMG_SAVE_PATH
 )
 
 # Crie um Blueprint para suas rotas
@@ -89,7 +90,6 @@ def register_student():
 
     print(f"Aluno {name} ({matricula}) cadastrado com sucesso.")
     return jsonify({"message": "Aluno cadastrado com sucesso!", "image_path": final_image_path}), 201
-
 
 @api_bp.route('/recognize', methods=['POST'])
 def recognize_face():
@@ -182,7 +182,6 @@ def delete_school_unit_route(unit_id):
         return jsonify({"error": "Unidade escolar não encontrada ou erro ao deletar."}), 404
     return jsonify({"message": "Unidade escolar deletada com sucesso!"}), 200
 
-
 @api_bp.route('/attendances', methods=['GET'])
 def get_attendances():
     start_date_str = request.args.get('start_date')
@@ -241,3 +240,123 @@ def export_attendances_csv():
         print(f"Erro ao exportar frequências para CSV: {e}")
         traceback.print_exc() 
         return jsonify({"error": "Erro ao exportar frequências."}), 500
+    
+@api_bp.route('/students_by_school/<int:school_unit_id>', methods=['GET'])
+def list_students_by_school(school_unit_id):
+    students = get_students_by_school_unit(school_unit_id)
+    return jsonify(students), 200
+
+@api_bp.route('/students/<string:matricula>', methods=['GET'])
+def get_student_details(matricula):
+    student = get_student_details_by_matricula(matricula)
+    if student:
+        # Não retorne o image_path diretamente se não for necessário para o frontend
+        # ou se o frontend for buscar a imagem via outro endpoint
+        student_data = {k: v for k, v in student.items() if k != 'image_path'}
+        return jsonify(student_data), 200
+    return jsonify({"error": "Aluno não encontrado."}), 404
+
+@api_bp.route('/students/<string:matricula>/image', methods=['PUT'])
+def update_student_photo(matricula):
+    data = request.get_json()
+    image_data_url = data.get('image')
+
+    if not image_data_url:
+        return jsonify({"error": "Dados de imagem incompletos."}), 400
+
+    student = get_student_details_by_matricula(matricula)
+    if not student:
+        return jsonify({"error": "Aluno não encontrado."}), 404
+
+    # Remove o embedding antigo e a imagem antiga
+    remove_student_embedding(matricula)
+    # Tenta remover a imagem antiga do disco, se ela existir
+    if os.path.exists(student["image_path"]):
+        try:
+            os.remove(student["image_path"])
+            print(f"Imagem antiga do aluno {matricula} removida: {student['image_path']}")
+        except Exception as e:
+            print(f"Erro ao remover imagem antiga do aluno {matricula}: {e}")
+
+    try:
+        header, encoded_data = image_data_url.split(',', 1)
+        image_bytes = base64.b64decode(encoded_data)
+        
+        student_img_dir = os.path.join(IMG_SAVE_PATH, matricula)
+        if not os.path.exists(student_img_dir):
+            os.makedirs(student_img_dir)
+        
+        image_filename = f"{matricula}_{uuid.uuid4().hex}.png"
+        new_image_path = os.path.join(student_img_dir, image_filename)
+        
+        with open(new_image_path, 'wb') as f:
+            f.write(image_bytes)
+        print(f"Nova imagem salva em: {new_image_path}")
+
+        # Atualiza o caminho da imagem no DB
+        if not update_student_image_path(matricula, new_image_path):
+            return jsonify({"error": "Erro ao atualizar caminho da imagem no banco de dados."}), 500
+
+        # Gera e adiciona o novo embedding
+        embedding = generate_embedding(new_image_path)
+        if embedding is not None:
+            add_student_embedding(student["name"], matricula, embedding, new_image_path, student["school_unit_id"])
+            return jsonify({"message": "Foto do aluno atualizada com sucesso!"}), 200
+        else:
+            return jsonify({"error": "Não foi possível gerar embedding para a nova imagem."}), 500
+
+    except Exception as e:
+        print(f"Erro ao atualizar foto do aluno: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Erro ao processar nova imagem ou atualizar dados."}), 500
+
+@api_bp.route('/students/<string:matricula>', methods=['PUT'])
+def update_student_info(matricula):
+    data = request.get_json()
+    name = data.get('name')
+    turma = data.get('turma')
+    turno = data.get('turno')
+    idade = data.get('idade')
+    school_unit_id = data.get('school_unit_id')
+
+    if not all([name, turma, turno, idade]):
+        return jsonify({"error": "Dados incompletos para atualização."}), 400
+
+    if not update_student_data(matricula, name, turma, turno, idade, school_unit_id):
+        return jsonify({"error": "Erro ao atualizar dados do aluno ou aluno não encontrado."}), 500
+    
+    # Se o nome ou outros dados do aluno mudaram, pode ser útil atualizar o embedding em memória
+    # Embora o embedding seja vinculado à foto, se o name mudar, a lista em memória pode precisar de refresh
+    # Uma forma seria recarregar todos os embeddings, ou fazer um update mais granular.
+    # Por simplicidade, podemos ignorar a lista em memória para mudanças de nome,
+    # já que a matricula (key) e o embedding (foto) são os mais críticos para o reconhecimento.
+    # Se você decidir que mudanças de name ou school_unit_id DEVEM atualizar a lista em memória:
+    # from app.services.face_recognition import load_embeddings
+    # load_embeddings() # Isso recarrega tudo, pode ser pesado para muitos alunos.
+    # Uma abordagem melhor seria atualizar o item específico na lista REGISTERED_STUDENTS_EMBEDDINGS.
+
+    return jsonify({"message": "Dados do aluno atualizados com sucesso!"}), 200
+
+# Rota para deletar aluno (opcional)
+@api_bp.route('/students/<string:matricula>', methods=['DELETE'])
+def delete_student(matricula):
+    student = get_student_details_by_matricula(matricula)
+    if not student:
+        return jsonify({"error": "Aluno não encontrado."}), 404
+
+    # Remove a imagem do disco
+    if os.path.exists(student["image_path"]):
+        try:
+            os.remove(student["image_path"])
+            print(f"Imagem do aluno {matricula} removida do disco: {student['image_path']}")
+        except Exception as e:
+            print(f"Erro ao remover imagem do aluno {matricula} do disco: {e}")
+
+    # Remove o embedding em memória e do pkl
+    remove_student_embedding(matricula)
+
+    # Remove do banco de dados
+    if not delete_student_by_matricula(matricula):
+        return jsonify({"error": "Erro ao deletar aluno do banco de dados."}), 500
+
+    return jsonify({"message": "Aluno deletado com sucesso!"}), 200    

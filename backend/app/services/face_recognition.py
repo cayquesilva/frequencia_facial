@@ -70,6 +70,16 @@ def add_student_embedding(name, matricula, embedding, image_path, school_unit_id
     })
     save_embeddings()
 
+def remove_student_embedding(matricula):
+    global REGISTERED_STUDENTS_EMBEDDINGS
+    initial_len = len(REGISTERED_STUDENTS_EMBEDDINGS)
+    REGISTERED_STUDENTS_EMBEDDINGS = [s for s in REGISTERED_STUDENTS_EMBEDDINGS if s["matricula"] != matricula]
+    if len(REGISTERED_STUDENTS_EMBEDDINGS) < initial_len:
+        save_embeddings()
+        print(f"Embedding do aluno {matricula} removido. Total de alunos com embedding: {len(REGISTERED_STUDENTS_EMBEDDINGS)}")
+        return True
+    return False
+
 def recognize_face_from_image(image_bytes):
     temp_img_path = None
     try:

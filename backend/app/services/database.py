@@ -129,6 +129,81 @@ def add_student_to_db(name, matricula, turma, turno, idade, image_path, school_u
     finally:
         conn.close()
 
+def get_students_by_school_unit(school_unit_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = '''
+        SELECT 
+            s.id, 
+            s.name, 
+            s.matricula, 
+            s.turma, 
+            s.turno, 
+            s.idade, 
+            s.image_path,
+            su.name AS school_unit_name
+        FROM students AS s
+        LEFT JOIN school_units AS su ON s.school_unit_id = su.id
+        WHERE s.school_unit_id = ?
+    '''
+    students = cursor.execute(query, (school_unit_id,)).fetchall()
+    conn.close()
+    return [dict(s) for s in students]
+
+def get_student_details_by_matricula(matricula):
+    conn = get_db_connection()
+    student = conn.execute('SELECT * FROM students WHERE matricula = ?', (matricula,)).fetchone()
+    conn.close()
+    return dict(student) if student else None
+
+def update_student_image_path(matricula, new_image_path):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE students SET image_path = ? WHERE matricula = ?
+        ''', (new_image_path, matricula))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        conn.rollback()
+        print(f"Erro ao atualizar imagem do aluno {matricula} no DB: {e}")
+        return False
+    finally:
+        conn.close()
+
+def update_student_data(matricula, name, turma, turno, idade, school_unit_id):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE students SET name = ?, turma = ?, turno = ?, idade = ?, school_unit_id = ?
+            WHERE matricula = ?
+        ''', (name, turma, turno, idade, school_unit_id, matricula))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        conn.rollback()
+        print(f"Erro ao atualizar dados do aluno {matricula} no DB: {e}")
+        return False
+    finally:
+        conn.close()
+
+# Pode precisar de uma função para deletar aluno, se desejar
+def delete_student_by_matricula(matricula):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM students WHERE matricula = ?', (matricula,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        conn.rollback()
+        print(f"Erro ao deletar aluno {matricula} do DB: {e}")
+        return False
+    finally:
+        conn.close()
+        
 def get_school_unit(unit_id):
     conn = get_db_connection()
     unit = conn.execute('SELECT * FROM school_units WHERE id = ?', (unit_id,)).fetchone()
