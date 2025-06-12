@@ -1,4 +1,4 @@
-from flask import request, jsonify, send_file, Blueprint
+from flask import request, jsonify, send_file, Blueprint, current_app 
 import os
 import base64
 import uuid
@@ -309,6 +309,38 @@ def update_student_photo(matricula):
         print(f"Erro ao atualizar foto do aluno: {e}")
         traceback.print_exc()
         return jsonify({"error": "Erro ao processar nova imagem ou atualizar dados."}), 500
+
+# Rota para servir imagens dos estudantes
+@api_bp.route('/student_images/<string:matricula>/<string:filename>', methods=['GET'])
+def get_student_image(matricula, filename):
+    # O caminho completo onde as imagens dos estudantes são salvas é IMG_SAVE_PATH / matricula / filename
+    # IMG_SAVE_PATH vem de face_recognition.py, mas precisamos do caminho absoluto para send_from_directory
+    # Para ser robusto, calculamos o base_dir do IMG_SAVE_PATH aqui, já que ele é um path relativo
+    
+    # IMPORTANTE: Garanta que IMG_SAVE_PATH seja absoluto ou que esta lógica funcione com ele.
+    # No face_recognition.py, IMG_SAVE_PATH já é baseado em DATA_DIR que é absoluto.
+    # Então, podemos usá-lo diretamente, mas send_from_directory precisa da pasta base.
+    
+    # A pasta base para send_from_directory deve ser o IMG_SAVE_PATH
+    # E o diretório do arquivo a ser enviado é a subpasta da matrícula.
+    image_dir_for_student = os.path.join(IMG_SAVE_PATH, matricula)
+
+    # Verifica se o arquivo existe e se a matrícula corresponde ao aluno
+    student = get_student_details_by_matricula(matricula)
+    if not student or not student.get("image_path"):
+        return jsonify({"error": "Aluno ou imagem não encontrada."}), 404
+    
+    # Verifica se o filename solicitado faz parte do image_path do aluno para evitar travessia de diretório
+    if not filename in student["image_path"]: # Verifica se o filename existe na string do caminho
+        return jsonify({"error": "Acesso negado ou imagem inválida."}), 403 # OU 404 se não for o arquivo correto
+
+    try:
+        return send_file(os.path.join(image_dir_for_student, filename), mimetype='image/png') # Assumindo PNG
+    except FileNotFoundError:
+        return jsonify({"error": "Imagem não encontrada no servidor."}), 404
+    except Exception as e:
+        print(f"Erro ao servir imagem do aluno {matricula}/{filename}: {e}")
+        return jsonify({"error": "Erro interno ao servir imagem."}), 500
 
 @api_bp.route('/students/<string:matricula>', methods=['PUT'])
 def update_student_info(matricula):

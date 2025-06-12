@@ -1,5 +1,5 @@
 # Fase de Build: Usar uma imagem Node.js para construir a aplicação Vue (com Vite)
-FROM node:lts-alpine AS builder
+FROM node:lts-alpine as builder
 
 # Define o diretório de trabalho
 WORKDIR /app

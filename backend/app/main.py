@@ -1,5 +1,5 @@
 # app/main.py
-from flask import Flask
+from flask import Flask, current_app 
 from flask_cors import CORS
 import os
 

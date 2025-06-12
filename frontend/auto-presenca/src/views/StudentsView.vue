@@ -86,6 +86,12 @@
                 </select>
             </div>
             
+            <h4>Foto Atual do Aluno:</h4>
+            <div class="current-image-preview" style="margin-top: 10px; text-align: center;">
+                <img :src="currentStudentImageUrl" style="max-width: 200px; border: 1px solid #ccc;" v-if="currentStudentImageUrl">
+                <p v-else>Nenhuma foto atual cadastrada...</p>
+            </div>
+            
             <h4>Atualizar Foto (Opcional):</h4>
             <div class="webcam-container" v-if="showWebcamForEdit">
               <video id="webcamFeedEdit" ref="webcamFeedEdit" autoplay playsinline></video>
@@ -112,8 +118,8 @@
   </template>
   
   <script>
-  import { ref, reactive, onMounted, onBeforeUnmount } from 'vue';
-  import { fetchSchoolUnits, fetchStudentsBySchool, getStudentDetails, updateStudentInfo, updateStudentImage, deleteStudent } from '../api/backendApi';
+  import { ref, reactive, onMounted, onBeforeUnmount, computed  } from 'vue';
+  import { fetchSchoolUnits, fetchStudentsBySchool, getStudentDetails, updateStudentInfo, updateStudentImage, deleteStudent, getStudentImageUrl  } from '../api/backendApi';
   
   export default {
     name: 'StudentsView',
@@ -162,6 +168,16 @@
           loadingStudents.value = false;
         }
       };
+
+      const currentStudentImageUrl = computed(() => {
+        // Se currentStudent.image_path existir, crie a URL para servir a imagem
+        if (currentStudent.matricula && currentStudent.image_path) {
+          // Extraia o nome do arquivo do caminho completo
+          const filename = currentStudent.image_path.split(/[\\/]/).pop();
+          return getStudentImageUrl(currentStudent.matricula, filename);
+        }
+        return null;
+      });
   
       // --- Funções do Modal de Edição ---
       const openEditModal = async (studentToEdit) => {
@@ -173,7 +189,7 @@
               capturedEditImageDataURL.value = null; // Limpa pré-visualização de foto anterior
               showEditModal.value = true;
               showWebcamForEdit.value = false; // Garante que a webcam não abre automaticamente
-              streamEdit = null; // Limpa stream anterior
+              stopWebcamEdit(); // Garante que a webcam anterior esteja parada
           } else {
               alert('Não foi possível carregar os detalhes do aluno.');
           }
@@ -321,6 +337,7 @@
         capturedEditImageDataURL,
         toggleWebcamForEdit,
         captureImageForEdit,
+        currentStudentImageUrl,
       };
     }
   };
