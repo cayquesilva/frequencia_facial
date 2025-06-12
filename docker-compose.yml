@@ -5,60 +5,49 @@ services:
   backend:
     image: cayquesilva/frequencia-backend:latest # Sua imagem do Docker Hub
     networks:
-      - app-internal-network # Rede interna para comunicação entre os serviços da sua aplicação
-      - traefik-proxy        # Rede para o Traefik rotear o tráfego externo para este serviço
+      - SimpliSoft           # Conecta à rede que o Traefik monitora
     volumes:
       # Persistir o diretório 'data' do backend (DB, imagens, embeddings)
-      # O volume 'backend_data_volume' será criado automaticamente no nó onde o container rodar
       - backend_data_volume:/app/data
     environment:
-      # Opcional: Variáveis de ambiente para o Flask, se precisar
       - FLASK_ENV=production
     deploy:
-      replicas: 1 # Número de instâncias do serviço. Pode aumentar para escalabilidade.
-      # placement: # Opcional: Restrições para onde o serviço pode ser agendado no Swarm
-      #   constraints:
-      #     - node.role == worker
+      replicas: 1
       labels:
         # Labels para o Traefik rotear o tráfego para este serviço (sua API)
-        - "traefik.enable=true" # Habilita o roteamento do Traefik para este serviço
-        - "traefik.http.routers.backend-api.rule=Host(`api.seuservidor.com`)" # Regra: rotear tráfego para este domínio
-        - "traefik.http.routers.backend-api.entrypoints=web" # Acessível via HTTP
-        # Para HTTPS (descomente e configure se o Traefik estiver configurado para HTTPS):
-        # - "traefik.http.routers.backend-api.entrypoints=websecure"
-        # - "traefik.http.routers.backend-api.tls.certresolver=myresolver" # Usa o resolvedor ACME do Traefik
-        - "traefik.http.services.backend-api.loadbalancer.server.port=5000" # Porta interna do container Flask
+        - "traefik.enable=true"
+        - "traefik.http.routers.backend-api.rule=Host(`apifreq.academiaarius.com`)"
+        - "traefik.http.routers.backend-api.entrypoints=web"
+        - "traefik.http.routers.backend-api.entrypoints=websecure"
+        - "traefik.http.routers.backend-api.tls.certresolver=myresolver"
+        - "traefik.http.services.backend-api.loadbalancer.server.port=5000"
+        - "traefik.http.services.backend-api.loadbalancer.timeout.duration=300s"
 
   frontend:
     image: cayquesilva/frequencia-frontend:latest # Sua imagem do Docker Hub
     networks:
-      - app-internal-network
-      - traefik-proxy
+      - SimpliSoft           # Conecta à rede que o Traefik monitora
     deploy:
       replicas: 1
-      # placement:
-      #   constraints:
-      #     - node.role == worker
       labels:
         # Labels para o Traefik rotear o tráfego para este serviço (seu Frontend Vue.js)
         - "traefik.enable=true"
-        - "traefik.http.routers.frontend-app.rule=Host(`www.seuservidor.com`) || Host(`seuservidor.com`)" # Domínio principal
+        - "traefik.http.routers.frontend-app.rule=Host(`frequencia.academiaarius.com`)"
         - "traefik.http.routers.frontend-app.entrypoints=web"
-        # Para HTTPS:
-        # - "traefik.http.routers.frontend-app.entrypoints=websecure"
-        # - "traefik.http.routers.frontend-app.tls.certresolver=myresolver"
-        - "traefik.http.services.frontend-app.loadbalancer.server.port=80" # Porta interna do Nginx
+        - "traefik.http.routers.frontend-app.entrypoints=websecure"
+        - "traefik.http.routers.frontend-app.tls.certresolver=myresolver"
+        - "traefik.http.services.frontend-app.loadbalancer.server.port=80"
+        # Opcional, mas recomendado para SPAs com Nginx (reforcei isso antes):
+        - "traefik.http.middlewares.frontend-redirect.redirectscheme.scheme=https"
+        - "traefik.http.routers.frontend-app-http.rule=Host(`frequencia.academiaarius.com`)"
+        - "traefik.http.routers.frontend-app-http.entrypoints=web"
+        - "traefik.http.routers.frontend-app-http.middlewares=frontend-redirect@docker"
+        - "traefik.http.routers.frontend-app-http.service=frontend-app"
 
 networks:
-  # Define uma rede overlay interna para que os serviços frontend e backend possam se comunicar
-  app-internal-network:
-    driver: overlay # Necessário para Docker Swarm
-
-  # Refere-se à rede 'traefik-proxy' que você criou manualmente para o Traefik
-  traefik-proxy:
-    external: true # Indica que esta rede já existe e não deve ser criada por esta stack
+  SimpliSoft:             # Refere-se à rede SimpliSoft existente
+    external: true       # Indica que esta rede JÁ EXISTE e é gerenciada externamente
 
 volumes:
-  # Define um volume para persistir os dados do backend
   backend_data_volume:
-    driver: local # O volume será armazenado no sistema de arquivos do nó Docker onde o serviço rodar
+    driver: local

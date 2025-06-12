@@ -1,3 +1,6 @@
+// A variável de ambiente VITE_API_BASE_URL será injetada pelo Vite durante o build de produção.
+// Em desenvolvimento (npm run dev), import.meta.env.VITE_API_BASE_URL pode ser undefined,
+// então usamos um fallback para o localhost.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api';
 
 export async function fetchSchoolUnits() {
