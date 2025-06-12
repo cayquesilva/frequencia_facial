@@ -90,4 +90,80 @@ export async function exportAttendancesCsv(params) {
     window.open(`<span class="math-inline">\{API\_BASE\_URL\}/attendances/export\_csv?</span>{query}`, '_blank');
 }
 
-// ... adicione mais funções para exportar CSV, atualizar/deletar unidades, etc.
+export async function fetchStudentsBySchool(schoolUnitId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/students_by_school/${schoolUnitId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Erro ao carregar alunos por unidade escolar:', error);
+        throw error;
+    }
+}
+
+export async function getStudentDetails(matricula) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/students/${matricula}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Erro ao buscar detalhes do aluno:', error);
+        throw error;
+    }
+}
+
+export async function updateStudentImage(matricula, imageDataURL) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/students/${matricula}/image`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: imageDataURL })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro desconhecido ao atualizar foto.');
+        }
+        return data;
+    } catch (error) {
+        console.error('Erro de rede ou ao enviar nova foto:', error);
+        throw error;
+    }
+}
+
+export async function updateStudentInfo(matricula, studentData) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/students/${matricula}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(studentData)
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro desconhecido ao atualizar dados do aluno.');
+        }
+        return data;
+    } catch (error) {
+        console.error('Erro de rede ou ao atualizar dados do aluno:', error);
+        throw error;
+    }
+}
+
+export async function deleteStudent(matricula) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/students/${matricula}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro desconhecido ao deletar aluno.');
+        }
+        return data;
+    } catch (error) {
+        console.error('Erro de rede ou ao deletar aluno:', error);
+        throw error;
+    }
+}

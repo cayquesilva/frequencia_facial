@@ -5,6 +5,7 @@
       <div class="admin-actions">
           <router-link to="/logs" class="button logs">Ver Logs de Acesso</router-link>
           <router-link to="/school-units" class="button units">Gerenciar Unidades Escolares</router-link>
+          <router-link to="/students" class="button units">Gerenciar Alunos</router-link>
       </div>
   
       <div class="section">
@@ -69,7 +70,7 @@
     // Importe as funções de API do seu módulo centralizado
     import { fetchSchoolUnits, registerStudent } from '../api/backendApi'; // <-- AQUI ESTÁ A MUDANÇA PRINCIPAL
 
-    // Funções utilitárias (speak) podem permanecer aqui ou em um módulo separado
+    /* Funções utilitárias (speak) podem permanecer aqui ou em um módulo separado
     function speak(text) {
         const synth = window.speechSynthesis;
         if (synth) {
@@ -81,7 +82,7 @@
             console.warn("API SpeechSynthesis não suportada neste navegador.");
         }
     }
-  
+    */
     export default {
         name: 'AdminView',
         setup() {
