@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libxrender1 \
+    sqlite3 \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 

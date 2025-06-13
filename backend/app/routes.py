@@ -254,8 +254,8 @@ def get_student_details(matricula):
     if student:
         # Não retorne o image_path diretamente se não for necessário para o frontend
         # ou se o frontend for buscar a imagem via outro endpoint
-        student_data = {k: v for k, v in student.items() if k != 'image_path'}
-        return jsonify(student_data), 200
+        #student_data = {k: v for k, v in student.items() if k != 'image_path'}
+        return jsonify(student), 200
     return jsonify({"error": "Aluno não encontrado."}), 404
 
 @api_bp.route('/students/<string:matricula>/image', methods=['PUT'])
