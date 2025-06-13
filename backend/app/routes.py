@@ -47,21 +47,23 @@ def register_student():
         return jsonify({"error": "Dados incompletos. Nome, matrícula, turma, turno, idade e imagem são obrigatórios."}), 400
 
     image_bytes = None
-    relative_image_path  = None
+    final_image_path = None # Este era o caminho absoluto no sistema de arquivos
+    relative_image_path = None # Este é o caminho que você quer salvar no DB e no embedding
     try:
         header, encoded_data = image_data_url.split(',', 1)
         image_bytes = base64.b64decode(encoded_data)
-        
-        student_img_dir = os.path.join(IMG_SAVE_PATH, matricula)
+
+        student_img_dir = os.path.join(IMG_SAVE_PATH, matricula) # Ex: /app/data/student_images/454523
         if not os.path.exists(student_img_dir):
             os.makedirs(student_img_dir)
-        
+
         image_filename = f"{matricula}_{uuid.uuid4().hex}.png"
-        relative_image_path  = os.path.join(matricula, image_filename)
-        
-        with open(relative_image_path, 'wb') as f:
+        final_image_path = os.path.join(student_img_dir, image_filename) # Caminho completo para salvar no disco
+        relative_image_path = os.path.join(matricula, image_filename) # Caminho relativo para o DB/embedding
+
+        with open(final_image_path, 'wb') as f: # Salva no caminho ABSOLUTO
             f.write(image_bytes)
-        print(f"Imagem de cadastro salva em: {relative_image_path}")
+        print(f"Imagem de cadastro salva em: {final_image_path}")
 
     except Exception as e:
         print(f"Erro ao salvar imagem para cadastro: {e}")
@@ -77,7 +79,7 @@ def register_student():
     
     # Gerar e salvar embedding
     try:
-        embedding = generate_embedding(relative_image_path)
+        embedding = generate_embedding(final_image_path) # <-- IMPORTANTE: use final_image_path aqui
         
         if embedding is not None:
             add_student_embedding(name, matricula, embedding, relative_image_path, school_unit_id)
