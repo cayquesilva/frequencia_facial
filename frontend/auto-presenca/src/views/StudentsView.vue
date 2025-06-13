@@ -118,7 +118,7 @@
   </template>
   
   <script>
-  import { ref, reactive, onMounted, onBeforeUnmount, computed  } from 'vue';
+  import { ref, reactive, onMounted, onBeforeUnmount, computed, nextTick  } from 'vue';
   import { fetchSchoolUnits, fetchStudentsBySchool, getStudentDetails, updateStudentInfo, updateStudentImage, deleteStudent, getStudentImageUrl  } from '../api/backendApi';
   
   export default {
@@ -173,7 +173,8 @@
         // Se currentStudent.image_path existir, crie a URL para servir a imagem
         if (currentStudent.matricula && currentStudent.image_path) {
           // Extraia o nome do arquivo do caminho completo
-          const filename = currentStudent.image_path.split(/[\\/]/).pop();
+          const parts = currentStudent.image_path.split('/'); // ou split('\\') para Windows paths
+          const filename = parts[parts.length - 1]; // Pega o último elemento
           return getStudentImageUrl(currentStudent.matricula, filename);
         }
         return null;
@@ -190,6 +191,10 @@
               showEditModal.value = true;
               showWebcamForEdit.value = false; // Garante que a webcam não abre automaticamente
               stopWebcamEdit(); // Garante que a webcam anterior esteja parada
+
+              showEditModal.value = true; // Mostra o modal
+              // Use nextTick para garantir que o elemento <video> está no DOM
+              await nextTick(); 
           } else {
               alert('Não foi possível carregar os detalhes do aluno.');
           }
@@ -259,6 +264,7 @@
       };
   
       const startWebcamEdit = async () => {
+        console.log(webcamFeedEdit.value);
         try {
           if (streamEdit) {
             streamEdit.getTracks().forEach(track => track.stop());

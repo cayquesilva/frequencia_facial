@@ -59,13 +59,13 @@ def generate_embedding(image_path):
         print(f"Erro ao gerar embedding DeepFace para {image_path} (services/face_recognition.py): {e}")
         return None
 
-def add_student_embedding(name, matricula, embedding, image_path, school_unit_id):
+def add_student_embedding(name, matricula, embedding, relative_image_path, school_unit_id):
     global REGISTERED_STUDENTS_EMBEDDINGS
     REGISTERED_STUDENTS_EMBEDDINGS.append({
         "name": name,
         "matricula": matricula,
         "embedding": embedding,
-        "image_path": image_path,
+        "image_path": relative_image_path,
         "school_unit_id": school_unit_id
     })
     save_embeddings()
@@ -120,14 +120,16 @@ def recognize_face_from_image(image_bytes):
                 best_match = None
                 
                 for student_rec in REGISTERED_STUDENTS_EMBEDDINGS:
-                    # Verifica se a imagem do aluno cadastrado existe
-                    if not os.path.exists(student_rec["image_path"]):
-                        print(f"AVISO: Imagem do aluno {student_rec['matricula']} não encontrada em: {student_rec['image_path']} (services/face_recognition.py)")
+                    # Verifica se a imagem do aluno cadastrado 
+                    full_student_image_path = os.path.join(IMG_SAVE_PATH, student_rec["image_path"])
+
+                    if not os.path.exists(full_student_image_path):
+                        print(f"AVISO: Imagem do aluno {student_rec['matricula']} não encontrada em: {full_student_image_path} (services/face_recognition.py)")
                         continue # Pula este aluno se a imagem não for encontrada
 
                     verification_result = DeepFace.verify(
                         img1_path=temp_img_path,
-                        img2_path=student_rec["image_path"],
+                        img2_path=full_student_image_path,
                         model_name=RECOGNITION_MODEL,
                         detector_backend=DETECTOR_MODEL,
                         enforce_detection=False # Já detectamos uma face, mas podemos relaxar para o segundo img

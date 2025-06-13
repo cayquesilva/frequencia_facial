@@ -168,8 +168,8 @@ export async function deleteStudent(matricula) {
     }
 }
 
-export function getStudentImageUrl(matricula, filename) {
+export function getStudentImageUrl(matricula, relativePathIncludingFilename) {
     // Retorna a URL completa para a imagem do estudante
     // Ex: https://apifreq.simplisoft.com.br/api/student_images/12345/foto.png
-    return `${API_BASE_URL}/student_images/${matricula}/${filename}`;
+    return `${API_BASE_URL}/student_images/${relativePathIncludingFilename}`;
 }

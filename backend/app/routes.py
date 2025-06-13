@@ -47,7 +47,7 @@ def register_student():
         return jsonify({"error": "Dados incompletos. Nome, matrícula, turma, turno, idade e imagem são obrigatórios."}), 400
 
     image_bytes = None
-    final_image_path = None
+    relative_image_path  = None
     try:
         header, encoded_data = image_data_url.split(',', 1)
         image_bytes = base64.b64decode(encoded_data)
@@ -57,30 +57,30 @@ def register_student():
             os.makedirs(student_img_dir)
         
         image_filename = f"{matricula}_{uuid.uuid4().hex}.png"
-        final_image_path = os.path.join(student_img_dir, image_filename)
+        relative_image_path  = os.path.join(matricula, image_filename)
         
-        with open(final_image_path, 'wb') as f:
+        with open(relative_image_path, 'wb') as f:
             f.write(image_bytes)
-        print(f"Imagem de cadastro salva em: {final_image_path}")
+        print(f"Imagem de cadastro salva em: {relative_image_path}")
 
     except Exception as e:
         print(f"Erro ao salvar imagem para cadastro: {e}")
         return jsonify({"error": "Erro ao processar imagem."}), 500
 
     # Adicionar aluno ao DB
-    student_added = add_student_to_db(name, matricula, turma, turno, idade, final_image_path, school_unit_id)
+    student_added = add_student_to_db(name, matricula, turma, turno, idade, relative_image_path, school_unit_id)
     if not student_added:
         # Se add_student_to_db retornar False (por matrícula duplicada ou outro erro)
-        if os.path.exists(final_image_path):
-            os.remove(final_image_path) # Remove a imagem se o DB não aceitar
+        if os.path.exists(relative_image_path):
+            os.remove(relative_image_path) # Remove a imagem se o DB não aceitar
         return jsonify({"error": f"Matrícula '{matricula}' já existe ou erro no DB."}), 409
     
     # Gerar e salvar embedding
     try:
-        embedding = generate_embedding(final_image_path)
+        embedding = generate_embedding(relative_image_path)
         
         if embedding is not None:
-            add_student_embedding(name, matricula, embedding, final_image_path, school_unit_id)
+            add_student_embedding(name, matricula, embedding, relative_image_path, school_unit_id)
             print(f"Embedding para {name} ({matricula}) gerado e salvo. Total de alunos com embedding: {len(REGISTERED_STUDENTS_EMBEDDINGS)}")
         else:
             print(f"Atenção: Não foi possível gerar embedding para {name} na imagem de cadastro.")
@@ -321,21 +321,20 @@ def get_student_image(matricula, filename):
     # No face_recognition.py, IMG_SAVE_PATH já é baseado em DATA_DIR que é absoluto.
     # Então, podemos usá-lo diretamente, mas send_from_directory precisa da pasta base.
     
-    # A pasta base para send_from_directory deve ser o IMG_SAVE_PATH
-    # E o diretório do arquivo a ser enviado é a subpasta da matrícula.
-    image_dir_for_student = os.path.join(IMG_SAVE_PATH, matricula)
+    # O diretório base para send_from_directory
+    base_directory = os.path.join(IMG_SAVE_PATH, matricula) # Ex: /app/data/student_images/454523
 
     # Verifica se o arquivo existe e se a matrícula corresponde ao aluno
     student = get_student_details_by_matricula(matricula)
     if not student or not student.get("image_path"):
         return jsonify({"error": "Aluno ou imagem não encontrada."}), 404
     
-    # Verifica se o filename solicitado faz parte do image_path do aluno para evitar travessia de diretório
-    if not filename in student["image_path"]: # Verifica se o filename existe na string do caminho
-        return jsonify({"error": "Acesso negado ou imagem inválida."}), 403 # OU 404 se não for o arquivo correto
+    expected_filename_from_db = student["image_path"].split(os.sep)[-1]
+    if filename != expected_filename_from_db: # Compara apenas o nome do arquivo
+        return jsonify({"error": "Acesso negado ou imagem inválida."}), 403
 
     try:
-        return send_file(os.path.join(image_dir_for_student, filename), mimetype='image/png') # Assumindo PNG
+        return send_file(os.path.join(base_directory, filename), mimetype='image/png')
     except FileNotFoundError:
         return jsonify({"error": "Imagem não encontrada no servidor."}), 404
     except Exception as e:
